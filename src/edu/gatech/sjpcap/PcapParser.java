@@ -119,8 +119,8 @@ public class PcapParser{
 	return ((packet[dataOffset] >> 4) & 0xF) * 4;
     }
     
-    private IPPacket buildIPPacket(byte[] packet, long timestamp){
-	IPPacket ipPacket = new IPPacket(timestamp);
+    private IPPacket buildIPPacket(byte[] packet, long timestamp, long packetSize){
+	IPPacket ipPacket = new IPPacket(timestamp, packetSize);
 	
 	byte[] srcIP = new byte[4];
 	System.arraycopy(packet, PcapParser.ipSrcOffset, 
@@ -143,12 +143,12 @@ public class PcapParser{
 	return ipPacket;
     }
     
-    private UDPPacket buildUDPPacket(byte[] packet, long timestamp){
+    private UDPPacket buildUDPPacket(byte[] packet, long timestamp, long packetSize){
 	final int inUDPHeaderSrcPortOffset = 0;
 	final int inUDPHeaderDstPortOffset = 2;
 	
 	UDPPacket udpPacket = 
-	    new UDPPacket(this.buildIPPacket(packet, timestamp));
+	    new UDPPacket(this.buildIPPacket(packet, timestamp, packetSize), packetSize);
 	
 	int srcPortOffset = PcapParser.etherHeaderLength +
 	    this.getIPHeaderLength(packet) + inUDPHeaderSrcPortOffset;
@@ -170,12 +170,12 @@ public class PcapParser{
 	return udpPacket;
     }
     
-    private TCPPacket buildTCPPacket(byte[] packet, long timestamp){
+    private TCPPacket buildTCPPacket(byte[] packet, long timestamp, long packetSize){
 	final int inTCPHeaderSrcPortOffset = 0;
 	final int inTCPHeaderDstPortOffset = 2;
 	
 	TCPPacket tcpPacket = 
-	    new TCPPacket(this.buildIPPacket(packet, timestamp));
+	    new TCPPacket(this.buildIPPacket(packet, timestamp, packetSize), packetSize);
 	
 	int srcPortOffset = PcapParser.etherHeaderLength +
 	    this.getIPHeaderLength(packet) + inTCPHeaderSrcPortOffset;
@@ -226,13 +226,13 @@ public class PcapParser{
 	return pcapPacketHeader;
     }
     
-    private Packet buildPacket(byte[] packet, long timestamp){
+    private Packet buildPacket(byte[] packet, long timestamp, long packetSize){
 	if(this.isUDPPacket(packet))
-            return this.buildUDPPacket(packet, timestamp);
+            return this.buildUDPPacket(packet, timestamp, packetSize);
         else if(this.isTCPPacket(packet))
-            return this.buildTCPPacket(packet, timestamp);
+            return this.buildTCPPacket(packet, timestamp, packetSize);
         else if(this.isIPPacket(packet))
-            return this.buildIPPacket(packet, timestamp);
+            return this.buildIPPacket(packet, timestamp, packetSize);
         else
             return new Packet();
     }
@@ -252,7 +252,7 @@ public class PcapParser{
 	   (this.isTCPPacket(packet) && (packet.length < tcpMinPacketSize)))
 	    return new Packet();
 	
-	return this.buildPacket(packet, pcapPacketHeader.timestamp);
+	return this.buildPacket(packet, pcapPacketHeader.timestamp, pcapPacketHeader.packetSize);
     }
     
     public void closeFile(){
